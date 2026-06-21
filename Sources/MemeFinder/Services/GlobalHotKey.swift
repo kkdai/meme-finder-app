@@ -11,7 +11,7 @@ public final class GlobalHotKey {
     nonisolated(unsafe) private var hotKeyRef: EventHotKeyRef?
     nonisolated(unsafe) private var eventHandler: EventHandlerRef?
     nonisolated(unsafe) private let handler: () -> Void
-    nonisolated(unsafe) private let id: UInt32
+    private let id: UInt32
 
     // Maps a hotkey id to its instance so the C event callback can dispatch.
     nonisolated(unsafe) private static var registry: [UInt32: GlobalHotKey] = [:]
