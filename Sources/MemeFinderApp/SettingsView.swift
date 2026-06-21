@@ -7,8 +7,9 @@ public struct SettingsView: View {
     @ObservedObject var indexing: IndexingController
     @State private var keyField: String = ""
     let onReindex: () -> Void
-    public init(vm: SettingsViewModel, indexing: IndexingController, onReindex: @escaping () -> Void = {}) {
-        self.vm = vm; self.indexing = indexing; self.onReindex = onReindex
+    let onCancel: () -> Void
+    public init(vm: SettingsViewModel, indexing: IndexingController, onReindex: @escaping () -> Void = {}, onCancel: @escaping () -> Void = {}) {
+        self.vm = vm; self.indexing = indexing; self.onReindex = onReindex; self.onCancel = onCancel
     }
 
     public var body: some View {
@@ -29,6 +30,7 @@ public struct SettingsView: View {
                 Button("重新索引") { onReindex() }
                     .disabled(vm.folderPath == nil || !vm.hasAPIKey)
                 if indexing.progress > 0 && indexing.progress < 1 {
+                    Button("取消") { onCancel() }
                     ProgressView(value: indexing.progress)
                 }
                 if !indexing.statusText.isEmpty {

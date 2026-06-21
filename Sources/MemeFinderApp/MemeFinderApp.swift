@@ -6,6 +6,7 @@ struct MemeFinderApp: App {
     @StateObject private var search: SearchViewModel
     @StateObject private var settings: SettingsViewModel
     @StateObject private var indexingController: IndexingController
+    @State private var reindexTask: Task<Void, Never>?
 
     private let indexURL: URL
     private let bookmark: FolderBookmark
@@ -29,15 +30,20 @@ struct MemeFinderApp: App {
     var body: some Scene {
         WindowGroup { ContentView(vm: search) }
         Settings {
-            SettingsView(vm: settings, indexing: indexingController) {
-                let folder = bookmark.resolve()
-                guard let folder else { return }
-                Task { @MainActor in
-                    let existing = MemeIndex.load(from: indexURL)
-                    let newIndex = await indexingController.reindex(folder: folder, existing: existing)
-                    search.updateIndex(newIndex)
-                }
-            }
+            SettingsView(
+                vm: settings,
+                indexing: indexingController,
+                onReindex: {
+                    reindexTask?.cancel()
+                    reindexTask = Task {
+                        guard let folder = bookmark.resolve() else { return }
+                        let existing = MemeIndex.load(from: indexURL)
+                        let newIndex = await indexingController.reindex(folder: folder, existing: existing)
+                        search.updateIndex(newIndex)
+                    }
+                },
+                onCancel: { reindexTask?.cancel() }
+            )
         }
     }
 }

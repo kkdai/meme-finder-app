@@ -22,8 +22,13 @@ public final class IndexingController: ObservableObject {
         }
         progress = 1.0
         try? outcome.index.save(to: indexURL)
-        statusText = outcome.errors.isEmpty ? "索引完成（\(outcome.index.images.count) 張）"
-                                            : "完成，但有 \(outcome.errors.count) 張失敗"
+        if Task.isCancelled {
+            statusText = "已取消（已索引 \(outcome.index.images.count) 張）"
+        } else if outcome.errors.isEmpty {
+            statusText = "索引完成（\(outcome.index.images.count) 張）"
+        } else {
+            statusText = "完成，但有 \(outcome.errors.count) 張失敗"
+        }
         return outcome.index
     }
 }
