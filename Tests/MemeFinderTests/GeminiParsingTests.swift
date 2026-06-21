@@ -56,3 +56,13 @@ private func fixture(_ name: String) throws -> Data {
     let svc = LiveGeminiService(keyProvider: { "" })
     await #expect(throws: GeminiError.missingKey) { _ = try await svc.embed(text: "x") }
 }
+
+@Test func mapResponseHandlesStatusCodes() throws {
+    #expect(try LiveGeminiService.mapResponse(data: Data([1, 2]), statusCode: 200) == Data([1, 2]))
+    #expect(throws: GeminiError.rateLimited) {
+        _ = try LiveGeminiService.mapResponse(data: Data(), statusCode: 429)
+    }
+    #expect(throws: GeminiError.httpError(500)) {
+        _ = try LiveGeminiService.mapResponse(data: Data(), statusCode: 500)
+    }
+}

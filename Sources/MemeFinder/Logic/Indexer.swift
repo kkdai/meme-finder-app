@@ -3,13 +3,42 @@ import Foundation
 public struct IndexError: Equatable, Sendable { public var path: String; public var message: String }
 public struct IndexOutcome: Sendable { public var index: MemeIndex; public var errors: [IndexError] }
 
-public struct Indexer {
+public struct Indexer: Sendable {
     private static let exts: Set<String> = ["jpg", "jpeg", "png", "webp"]
     private let service: GeminiService
-    public init(service: GeminiService) { self.service = service }
+    private let maxConcurrent: Int
+    private let retryBaseDelay: Double
+
+    public init(service: GeminiService, maxConcurrent: Int = 4, retryBaseDelay: Double = 0.5) {
+        self.service = service
+        self.maxConcurrent = max(1, maxConcurrent)
+        self.retryBaseDelay = retryBaseDelay
+    }
 
     private func mimeType(for ext: String) -> String {
         switch ext { case "png": return "image/png"; case "webp": return "image/webp"; default: return "image/jpeg" }
+    }
+
+    private struct WorkResult: Sendable {
+        let path: String
+        let image: IndexedImage?
+        let error: IndexError?
+    }
+
+    private func retryingOnRateLimit<T: Sendable>(_ op: @Sendable () async throws -> T) async throws -> T {
+        var attempt = 0
+        while true {
+            do { return try await op() }
+            catch GeminiError.rateLimited {
+                // 3 total attempts: 1 initial + 2 retries, then give up.
+                attempt += 1
+                if attempt >= 3 { throw GeminiError.rateLimited }
+                let delay = retryBaseDelay * pow(2.0, Double(attempt - 1))
+                // Let cancellation during backoff propagate (surfaces as an
+                // IndexError for this file) rather than firing one more call.
+                if delay > 0 { try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000)) }
+            }
+        }
     }
 
     public func buildIndex(folder: URL, existing: MemeIndex,
@@ -17,33 +46,57 @@ public struct Indexer {
         let fm = FileManager.default
         let files = ((try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.contentModificationDateKey])) ?? [])
             .filter { Self.exts.contains($0.pathExtension.lowercased()) }
-            .sorted { $0.path < $1.path }
-        let normalize = { (path: String) -> String in (NSURL(fileURLWithPath: path) as URL).standardizedFileURL.path }
-        let byPath = Dictionary(uniqueKeysWithValues: existing.images.map { (normalize($0.path), $0) })
+            .sorted { $0.standardizedFileURL.path < $1.standardizedFileURL.path }
+        let byPath = Dictionary(existing.images.map { (URL(fileURLWithPath: $0.path).standardizedFileURL.path, $0) },
+                                uniquingKeysWith: { a, _ in a })
+        let total = files.count
 
-        var images: [IndexedImage] = []
+        var resultsByPath: [String: IndexedImage] = [:]
         var errors: [IndexError] = []
-        for (i, url) in files.enumerated() {
-            let path = normalize(url.path)
-            let mtime = (try? fm.attributesOfItem(atPath: path)[.modificationDate] as? Date) ?? nil ?? Date()
-            if let prev = byPath[path], prev.modifiedAt == mtime {
-                images.append(prev)
-            } else {
-                do {
-                    let data = try Data(contentsOf: url)
-                    let mime = mimeType(for: url.pathExtension.lowercased())
-                    let ann = try await service.annotate(imageData: data, mimeType: mime)
-                    let embedText = [ann.ocrText, ann.description, ann.tags.joined(separator: " "), ann.emotion].joined(separator: " ")
-                    let vec = try await service.embed(text: embedText)
-                    images.append(IndexedImage(id: path, path: path, modifiedAt: mtime,
-                        ocrText: ann.ocrText, imageDescription: ann.description,
-                        tags: ann.tags, emotion: ann.emotion, embedding: vec))
-                } catch {
-                    errors.append(IndexError(path: path, message: String(describing: error)))
+        var done = 0
+
+        await withTaskGroup(of: WorkResult.self) { group in
+            var iterator = files.makeIterator()
+
+            func scheduleNext() -> Bool {
+                guard !Task.isCancelled, let url = iterator.next() else { return false }
+                let path = url.standardizedFileURL.path
+                let mtime = ((try? fm.attributesOfItem(atPath: path)[.modificationDate]) as? Date) ?? Date()
+                if let prev = byPath[path], prev.modifiedAt == mtime {
+                    group.addTask { WorkResult(path: path, image: prev, error: nil) }
+                    return true
                 }
+                let service = self.service
+                let mime = mimeType(for: url.pathExtension.lowercased())
+                group.addTask {
+                    do {
+                        let data = try Data(contentsOf: url)
+                        let ann = try await self.retryingOnRateLimit { try await service.annotate(imageData: data, mimeType: mime) }
+                        let text = [ann.ocrText, ann.description, ann.tags.joined(separator: " "), ann.emotion].joined(separator: " ")
+                        let vec = try await self.retryingOnRateLimit { try await service.embed(text: text) }
+                        let img = IndexedImage(id: path, path: path, modifiedAt: mtime,
+                                               ocrText: ann.ocrText, imageDescription: ann.description,
+                                               tags: ann.tags, emotion: ann.emotion, embedding: vec)
+                        return WorkResult(path: path, image: img, error: nil)
+                    } catch {
+                        return WorkResult(path: path, image: nil,
+                                          error: IndexError(path: path, message: String(describing: error)))
+                    }
+                }
+                return true
             }
-            progress(i + 1, files.count)
+
+            for _ in 0..<maxConcurrent { if !scheduleNext() { break } }
+            while let res = await group.next() {
+                if let img = res.image { resultsByPath[res.path] = img }
+                if let err = res.error { errors.append(err) }
+                done += 1
+                progress(done, total)
+                _ = scheduleNext()
+            }
         }
-        return IndexOutcome(index: MemeIndex(images: images), errors: errors)
+
+        let ordered = files.map { $0.standardizedFileURL.path }.compactMap { resultsByPath[$0] }
+        return IndexOutcome(index: MemeIndex(images: ordered), errors: errors)
     }
 }
