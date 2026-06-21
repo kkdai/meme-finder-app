@@ -41,5 +41,5 @@ private func fixture(_ name: String) throws -> Data {
 
 @Test func liveServiceThrowsMissingKeyWhenEmpty() async {
     let svc = LiveGeminiService(keyProvider: { "" })
-    await #expect(throws: GeminiError.self) { _ = try await svc.embed(text: "x") }
+    await #expect(throws: GeminiError.missingKey) { _ = try await svc.embed(text: "x") }
 }
