@@ -3,9 +3,10 @@ import Foundation
 @testable import MemeFinder
 
 final class FakeService: GeminiService, @unchecked Sendable {
+    let lock = NSLock()
     var annotateCalls = 0
     func annotate(imageData: Data, mimeType: String) async throws -> Annotation {
-        annotateCalls += 1
+        lock.withLock { annotateCalls += 1 }
         return Annotation(ocrText: "T", description: "D", tags: ["x"], emotion: "E")
     }
     func embed(text: String) async throws -> [Float] { [0.5, 0.5] }

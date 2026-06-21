@@ -7,19 +7,23 @@ public final class IndexingController: ObservableObject {
     @Published public var statusText: String = ""
     private let service: GeminiService
     private let indexURL: URL
+    private var finalized = false
 
     public init(service: GeminiService, indexURL: URL) {
         self.service = service; self.indexURL = indexURL
     }
 
     public func reindex(folder: URL, existing: MemeIndex) async -> MemeIndex {
+        finalized = false
         statusText = "索引中…"
         let outcome = await Indexer(service: service).buildIndex(folder: folder, existing: existing) { done, total in
             Task { @MainActor in
+                guard !self.finalized else { return }
                 self.progress = total == 0 ? 1 : Double(done) / Double(total)
                 self.statusText = "索引中… \(done)/\(total)"
             }
         }
+        finalized = true
         progress = 1.0
         try? outcome.index.save(to: indexURL)
         if Task.isCancelled {

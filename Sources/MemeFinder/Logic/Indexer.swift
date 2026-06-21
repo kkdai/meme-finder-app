@@ -47,7 +47,8 @@ public struct Indexer: Sendable {
         let files = ((try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.contentModificationDateKey])) ?? [])
             .filter { Self.exts.contains($0.pathExtension.lowercased()) }
             .sorted { $0.standardizedFileURL.path < $1.standardizedFileURL.path }
-        let byPath = Dictionary(uniqueKeysWithValues: existing.images.map { ($0.path, $0) })
+        let byPath = Dictionary(existing.images.map { (URL(fileURLWithPath: $0.path).standardizedFileURL.path, $0) },
+                                uniquingKeysWith: { a, _ in a })
         let total = files.count
 
         var resultsByPath: [String: IndexedImage] = [:]
