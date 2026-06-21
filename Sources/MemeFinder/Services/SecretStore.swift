@@ -13,7 +13,10 @@ public final class InMemorySecretStore: SecretStore {
     public func apiKey() -> String? { value }
 }
 
-public final class KeychainSecretStore: SecretStore {
+// Sendable: a final class whose only stored property is an immutable String,
+// and whose methods call the thread-safe Keychain API. Lets the app capture it
+// in the @Sendable key-provider closure passed to LiveGeminiService.
+public final class KeychainSecretStore: SecretStore, Sendable {
     private let account: String
     public init(account: String = "gemini-api-key") { self.account = account }
 
