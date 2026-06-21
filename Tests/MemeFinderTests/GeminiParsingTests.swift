@@ -22,3 +22,19 @@ private func fixture(_ name: String) throws -> Data {
         _ = try GeminiParsing.annotation(fromGenerateContent: Data("{}".utf8))
     }
 }
+
+@Test func annotateRequestIsWellFormed() throws {
+    let req = LiveGeminiService.annotateRequest(apiKey: "K", imageData: Data([1, 2, 3]), mimeType: "image/png")
+    #expect(req.url?.absoluteString == "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent")
+    #expect(req.value(forHTTPHeaderField: "x-goog-api-key") == "K")
+    let body = try JSONSerialization.jsonObject(with: req.httpBody!) as! [String: Any]
+    let gc = body["generationConfig"] as! [String: Any]
+    #expect(gc["responseMimeType"] as? String == "application/json")
+}
+
+@Test func embedRequestIsWellFormed() throws {
+    let req = LiveGeminiService.embedRequest(apiKey: "K", text: "貓")
+    #expect(req.url?.absoluteString == "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent")
+    let body = try JSONSerialization.jsonObject(with: req.httpBody!) as! [String: Any]
+    #expect(body["output_dimensionality"] as? Int == 768)
+}
