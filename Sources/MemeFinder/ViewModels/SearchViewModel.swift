@@ -9,7 +9,7 @@ public final class SearchViewModel: ObservableObject {
 
     private let service: GeminiService
     private let clipboard: ClipboardWriter
-    private let index: MemeIndex
+    private var index: MemeIndex
     private let engine: SearchEngine
     private let limit: Int
 
@@ -30,6 +30,8 @@ public final class SearchViewModel: ObservableObject {
             errorMessage = "搜尋失敗：\(error.localizedDescription)"
         }
     }
+
+    public func updateIndex(_ index: MemeIndex) { self.index = index }
 
     public func copy(_ result: SearchResult) {
         do { try clipboard.copyImage(at: URL(fileURLWithPath: result.image.path)) }

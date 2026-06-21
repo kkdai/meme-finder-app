@@ -5,7 +5,10 @@ import MemeFinder
 public struct SettingsView: View {
     @ObservedObject var vm: SettingsViewModel
     @State private var keyField: String = ""
-    public init(vm: SettingsViewModel) { self.vm = vm }
+    let onReindex: () -> Void
+    public init(vm: SettingsViewModel, onReindex: @escaping () -> Void = {}) {
+        self.vm = vm; self.onReindex = onReindex
+    }
 
     public var body: some View {
         Form {
@@ -22,6 +25,8 @@ public struct SettingsView: View {
                     Spacer()
                     Button("選擇資料夾…") { chooseFolder() }
                 }
+                Button("重新索引") { onReindex() }
+                    .disabled(vm.folderPath == nil || !vm.hasAPIKey)
             }
         }
         .padding(20)
