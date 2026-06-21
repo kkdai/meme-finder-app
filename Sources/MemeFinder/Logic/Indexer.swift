@@ -30,10 +30,13 @@ public struct Indexer: Sendable {
         while true {
             do { return try await op() }
             catch GeminiError.rateLimited {
+                // 3 total attempts: 1 initial + 2 retries, then give up.
                 attempt += 1
                 if attempt >= 3 { throw GeminiError.rateLimited }
                 let delay = retryBaseDelay * pow(2.0, Double(attempt - 1))
-                if delay > 0 { try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000)) }
+                // Let cancellation during backoff propagate (surfaces as an
+                // IndexError for this file) rather than firing one more call.
+                if delay > 0 { try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000)) }
             }
         }
     }
