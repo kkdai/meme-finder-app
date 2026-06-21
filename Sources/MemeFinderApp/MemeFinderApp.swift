@@ -35,7 +35,7 @@ struct MemeFinderApp: App {
                 indexing: indexingController,
                 onReindex: {
                     reindexTask?.cancel()
-                    reindexTask = Task {
+                    reindexTask = Task { @MainActor in
                         guard let folder = bookmark.resolve() else { return }
                         let existing = MemeIndex.load(from: indexURL)
                         let newIndex = await indexingController.reindex(folder: folder, existing: existing)
