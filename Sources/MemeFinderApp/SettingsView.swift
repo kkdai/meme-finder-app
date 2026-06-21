@@ -39,7 +39,10 @@ public struct SettingsView: View {
             }
         }
         .padding(20)
-        .frame(width: 460)
+        // Height is required here: hosted in a plain NSWindow (not a SwiftUI
+        // Settings scene), a Form with no height constraint collapses to ~0,
+        // which makes the window open as a blank strip.
+        .frame(width: 460, height: 320)
     }
 
     private func chooseFolder() {

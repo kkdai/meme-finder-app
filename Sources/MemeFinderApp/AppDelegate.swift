@@ -4,9 +4,11 @@ import MemeFinder
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let search: SearchViewModel
-    private let settings: SettingsViewModel
-    private let indexing: IndexingController
+    // Exposed so the SwiftUI Settings scene (⌘,) can host the same real
+    // SettingsView the menu-bar "設定…" item opens.
+    let search: SearchViewModel
+    let settings: SettingsViewModel
+    let indexing: IndexingController
     private let indexURL: URL
     private let bookmark: FolderBookmark
 
@@ -14,7 +16,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let popover = NSPopover()
     private var hotKey: GlobalHotKey?
     private var reindexTask: Task<Void, Never>?
-    private var settingsWindow: NSWindow?
 
     override init() {
         let secrets = KeychainSecretStore()
@@ -88,7 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSearch() { togglePopover() }
 
-    @objc private func reindexNow() {
+    @objc func reindexNow() {
         reindexTask?.cancel()
         reindexTask = Task { @MainActor in
             guard let folder = bookmark.resolve() else { return }
@@ -98,23 +99,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    func cancelReindex() { reindexTask?.cancel() }
+
     @objc private func openSettings() {
-        if settingsWindow == nil {
-            let host = NSHostingController(rootView: SettingsView(
-                vm: settings,
-                indexing: indexing,
-                onReindex: { [weak self] in self?.reindexNow() },
-                onCancel: { [weak self] in self?.reindexTask?.cancel() }
-            ))
-            let window = NSWindow(contentViewController: host)
-            window.title = "MemeFinder 設定"
-            window.styleMask = [.titled, .closable]
-            window.isReleasedWhenClosed = false
-            window.center()  // center once on first creation; keep user's position after
-            settingsWindow = window
-        }
+        // Open the SwiftUI Settings scene — the same window ⌘, shows.
         NSApp.activate(ignoringOtherApps: true)
-        settingsWindow?.makeKeyAndOrderFront(nil)
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
     }
 
     @objc private func quit() { NSApp.terminate(nil) }
