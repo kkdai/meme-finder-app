@@ -8,7 +8,11 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-testing.git", from: "0.0.0"),
     ],
     targets: [
-        .executableTarget(
+        // Library target: all logic, models, services, and view models.
+        // Tests depend on this; it has no main entry point so it links cleanly
+        // as a library. The @main SwiftUI app lives in the MemeFinderApp
+        // executable target (added in the UI task) and imports this.
+        .target(
             name: "MemeFinder",
             path: "Sources/MemeFinder"
         ),
