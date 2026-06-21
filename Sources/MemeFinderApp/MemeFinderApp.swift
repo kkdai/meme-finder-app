@@ -13,7 +13,7 @@ struct MemeFinderApp: App {
     init() {
         let secrets = KeychainSecretStore()
         let bm = FolderBookmark()
-        let service = LiveGeminiService(apiKey: secrets.apiKey() ?? "")
+        let service = LiveGeminiService(keyProvider: { secrets.apiKey() })
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         let iURL = appSupport.appendingPathComponent("MemeFinder/index.json")
         let index = MemeIndex.load(from: iURL)
@@ -29,7 +29,7 @@ struct MemeFinderApp: App {
     var body: some Scene {
         WindowGroup { ContentView(vm: search) }
         Settings {
-            SettingsView(vm: settings) {
+            SettingsView(vm: settings, indexing: indexingController) {
                 let folder = bookmark.resolve()
                 guard let folder else { return }
                 Task { @MainActor in

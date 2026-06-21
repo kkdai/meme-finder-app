@@ -38,3 +38,8 @@ private func fixture(_ name: String) throws -> Data {
     let body = try JSONSerialization.jsonObject(with: req.httpBody!) as! [String: Any]
     #expect(body["output_dimensionality"] as? Int == 768)
 }
+
+@Test func liveServiceThrowsMissingKeyWhenEmpty() async {
+    let svc = LiveGeminiService(keyProvider: { "" })
+    await #expect(throws: GeminiError.self) { _ = try await svc.embed(text: "x") }
+}

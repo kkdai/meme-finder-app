@@ -4,10 +4,11 @@ import MemeFinder
 
 public struct SettingsView: View {
     @ObservedObject var vm: SettingsViewModel
+    @ObservedObject var indexing: IndexingController
     @State private var keyField: String = ""
     let onReindex: () -> Void
-    public init(vm: SettingsViewModel, onReindex: @escaping () -> Void = {}) {
-        self.vm = vm; self.onReindex = onReindex
+    public init(vm: SettingsViewModel, indexing: IndexingController, onReindex: @escaping () -> Void = {}) {
+        self.vm = vm; self.indexing = indexing; self.onReindex = onReindex
     }
 
     public var body: some View {
@@ -27,6 +28,12 @@ public struct SettingsView: View {
                 }
                 Button("重新索引") { onReindex() }
                     .disabled(vm.folderPath == nil || !vm.hasAPIKey)
+                if indexing.progress > 0 && indexing.progress < 1 {
+                    ProgressView(value: indexing.progress)
+                }
+                if !indexing.statusText.isEmpty {
+                    Text(indexing.statusText).font(.caption).foregroundStyle(.secondary)
+                }
             }
         }
         .padding(20)

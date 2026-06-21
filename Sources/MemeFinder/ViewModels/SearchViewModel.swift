@@ -26,6 +26,8 @@ public final class SearchViewModel: ObservableObject {
             let vec = try await service.embed(text: q)
             results = engine.search(queryEmbedding: vec, queryText: q, in: index.images, limit: limit)
             errorMessage = nil
+        } catch GeminiError.missingKey {
+            errorMessage = "請先到設定（⌘,）輸入 Gemini API 金鑰"
         } catch {
             errorMessage = "搜尋失敗：\(error.localizedDescription)"
         }

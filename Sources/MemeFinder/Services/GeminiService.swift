@@ -13,6 +13,7 @@ public struct Annotation: Equatable, Sendable {
 
 public enum GeminiError: Error, Equatable {
     case badResponse(String)
+    case missingKey
 }
 
 public protocol GeminiService: Sendable {
@@ -21,10 +22,21 @@ public protocol GeminiService: Sendable {
 }
 
 public struct LiveGeminiService: GeminiService {
-    private let apiKey: String
+    private let keyProvider: @Sendable () -> String?
     private let session: URLSession
+    public init(keyProvider: @escaping @Sendable () -> String?, session: URLSession = .shared) {
+        self.keyProvider = keyProvider; self.session = session
+    }
     public init(apiKey: String, session: URLSession = .shared) {
-        self.apiKey = apiKey; self.session = session
+        let key = apiKey
+        self.init(keyProvider: { key }, session: session)
+    }
+
+    private func currentKey() throws -> String {
+        guard let k = keyProvider(), !k.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw GeminiError.missingKey
+        }
+        return k
     }
 
     private static let base = "https://generativelanguage.googleapis.com/v1beta/models"
@@ -66,12 +78,14 @@ public struct LiveGeminiService: GeminiService {
     }
 
     public func annotate(imageData: Data, mimeType: String) async throws -> Annotation {
-        let (data, _) = try await session.data(for: Self.annotateRequest(apiKey: apiKey, imageData: imageData, mimeType: mimeType))
+        let key = try currentKey()
+        let (data, _) = try await session.data(for: Self.annotateRequest(apiKey: key, imageData: imageData, mimeType: mimeType))
         return try GeminiParsing.annotation(fromGenerateContent: data)
     }
 
     public func embed(text: String) async throws -> [Float] {
-        let (data, _) = try await session.data(for: Self.embedRequest(apiKey: apiKey, text: text))
+        let key = try currentKey()
+        let (data, _) = try await session.data(for: Self.embedRequest(apiKey: key, text: text))
         return try GeminiParsing.embedding(fromEmbedContent: data)
     }
 }
