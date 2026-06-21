@@ -13,6 +13,13 @@ public struct ContentView: View {
                 TextField("搜尋迷因…例如：謝謝、無言、好棒", text: $vm.query)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit { Task { await vm.runSearch(); didSearch = true } }
+                    .onChange(of: vm.query) { _, newValue in
+                        // Clearing the box returns to browsing all images (newest first).
+                        if newValue.trimmingCharacters(in: .whitespaces).isEmpty {
+                            vm.showAll()
+                            didSearch = false
+                        }
+                    }
                 Button("搜尋") { Task { await vm.runSearch(); didSearch = true } }
             }
             .padding()

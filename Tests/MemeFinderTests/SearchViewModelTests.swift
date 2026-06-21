@@ -37,6 +37,41 @@ private final class SpyClipboard: ClipboardWriter, @unchecked Sendable {
 }
 
 @MainActor
+@Test func showsAllImagesNewestFirstByDefault() {
+    let older = IndexedImage(id: "/m/old.png", path: "/m/old.png", modifiedAt: Date(timeIntervalSince1970: 100),
+                             ocrText: "", imageDescription: "", tags: [], emotion: "", embedding: [1])
+    let newer = IndexedImage(id: "/m/new.png", path: "/m/new.png", modifiedAt: Date(timeIntervalSince1970: 200),
+                             ocrText: "", imageDescription: "", tags: [], emotion: "", embedding: [1])
+    let vm = SearchViewModel(service: StubService(), clipboard: SpyClipboard(), index: MemeIndex(images: [older, newer]))
+    // Before any search, the grid shows every image, newest first.
+    #expect(vm.results.map(\.image.id) == ["/m/new.png", "/m/old.png"])
+}
+
+@MainActor
+@Test func blankQueryShowsAllImagesNewestFirst() async {
+    let older = IndexedImage(id: "/m/old.png", path: "/m/old.png", modifiedAt: Date(timeIntervalSince1970: 100),
+                             ocrText: "", imageDescription: "", tags: [], emotion: "", embedding: [1])
+    let newer = IndexedImage(id: "/m/new.png", path: "/m/new.png", modifiedAt: Date(timeIntervalSince1970: 200),
+                             ocrText: "", imageDescription: "", tags: [], emotion: "", embedding: [1])
+    let vm = SearchViewModel(service: StubService(), clipboard: SpyClipboard(), index: MemeIndex(images: [older, newer]))
+    vm.query = "   "
+    await vm.runSearch()
+    #expect(vm.results.map(\.image.id) == ["/m/new.png", "/m/old.png"])
+}
+
+@MainActor
+@Test func updateIndexRefreshesBrowseNewestFirst() {
+    let vm = SearchViewModel(service: StubService(), clipboard: SpyClipboard(), index: MemeIndex())
+    #expect(vm.results.isEmpty)
+    let a = IndexedImage(id: "/m/a.png", path: "/m/a.png", modifiedAt: Date(timeIntervalSince1970: 100),
+                         ocrText: "", imageDescription: "", tags: [], emotion: "", embedding: [1])
+    let b = IndexedImage(id: "/m/b.png", path: "/m/b.png", modifiedAt: Date(timeIntervalSince1970: 200),
+                         ocrText: "", imageDescription: "", tags: [], emotion: "", embedding: [1])
+    vm.updateIndex(MemeIndex(images: [a, b]))
+    #expect(vm.results.map(\.image.id) == ["/m/b.png", "/m/a.png"])
+}
+
+@MainActor
 @Test func copyDelegatesToClipboard() {
     let clip = SpyClipboard()
     let vm = SearchViewModel(service: StubService(), clipboard: clip, index: MemeIndex())

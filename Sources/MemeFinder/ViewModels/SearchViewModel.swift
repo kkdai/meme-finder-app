@@ -17,11 +17,26 @@ public final class SearchViewModel: ObservableObject {
                 engine: SearchEngine = SearchEngine(), limit: Int = 30) {
         self.service = service; self.clipboard = clipboard; self.index = index
         self.engine = engine; self.limit = limit
+        self.results = allImagesNewestFirst()
+    }
+
+    /// All indexed images as results, newest first (by file modification date).
+    /// Used as the default browse view before any search is run.
+    private func allImagesNewestFirst() -> [SearchResult] {
+        index.images
+            .sorted { $0.modifiedAt > $1.modifiedAt }
+            .map { SearchResult(image: $0, score: 0) }
+    }
+
+    /// Reset the grid to show every indexed image, newest first.
+    public func showAll() {
+        results = allImagesNewestFirst()
+        errorMessage = nil
     }
 
     public func runSearch() async {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { results = []; return }
+        guard !q.isEmpty else { results = allImagesNewestFirst(); return }
         do {
             let vec = try await service.embed(text: q)
             results = engine.search(queryEmbedding: vec, queryText: q, in: index.images, limit: limit)
@@ -33,7 +48,10 @@ public final class SearchViewModel: ObservableObject {
         }
     }
 
-    public func updateIndex(_ index: MemeIndex) { self.index = index }
+    public func updateIndex(_ index: MemeIndex) {
+        self.index = index
+        results = allImagesNewestFirst()
+    }
 
     public func copy(_ result: SearchResult) {
         do { try clipboard.copyImage(at: URL(fileURLWithPath: result.image.path)) }
