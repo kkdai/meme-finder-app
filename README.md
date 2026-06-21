@@ -1,5 +1,8 @@
 # MemeFinder
 
+<img width="899" height="517" alt="image" src="https://github.com/user-attachments/assets/b46cc843-d88c-40bf-8ec0-a8d36ce062f4" />
+
+
 一個原生的 **macOS 迷因搜尋小工具**：指定一個本機迷因圖資料夾，用 **Google Gemini** 自動幫每張圖建立索引（讀出圖中文字、生成描述與標籤、產生語意向量），之後在搜尋框打中文 → 立刻出現最相關的迷因圖 → **點一下就複製到剪貼簿**，可直接貼到 LINE / Slack / 訊息。
 
 > 靈感來自 [ShiQu1218/MemeTalk](https://github.com/ShiQu1218/MemeTalk)（Python/Streamlit 的本地迷因語意搜尋系統），改寫成輕量的原生 macOS App。
