@@ -1,6 +1,6 @@
 import Foundation
 
-public struct MemeIndex: Codable, Equatable {
+public struct MemeIndex: Codable, Equatable, Sendable {
     public var images: [IndexedImage]
     public init(images: [IndexedImage] = []) { self.images = images }
 

@@ -1,6 +1,6 @@
 import Foundation
 
-public struct IndexedImage: Codable, Identifiable, Equatable {
+public struct IndexedImage: Codable, Identifiable, Equatable, Sendable {
     public var id: String
     public var path: String
     public var modifiedAt: Date
