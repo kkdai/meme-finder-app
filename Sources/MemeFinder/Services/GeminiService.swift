@@ -14,6 +14,8 @@ public struct Annotation: Equatable, Sendable {
 public enum GeminiError: Error, Equatable {
     case badResponse(String)
     case missingKey
+    case rateLimited
+    case httpError(Int)
 }
 
 public protocol GeminiService: Sendable {
@@ -77,15 +79,25 @@ public struct LiveGeminiService: GeminiService {
         return req
     }
 
+    public static func mapResponse(data: Data, statusCode: Int) throws -> Data {
+        switch statusCode {
+        case 200...299: return data
+        case 429: throw GeminiError.rateLimited
+        default: throw GeminiError.httpError(statusCode)
+        }
+    }
+
     public func annotate(imageData: Data, mimeType: String) async throws -> Annotation {
         let key = try currentKey()
-        let (data, _) = try await session.data(for: Self.annotateRequest(apiKey: key, imageData: imageData, mimeType: mimeType))
-        return try GeminiParsing.annotation(fromGenerateContent: data)
+        let (data, resp) = try await session.data(for: Self.annotateRequest(apiKey: key, imageData: imageData, mimeType: mimeType))
+        let checked = try Self.mapResponse(data: data, statusCode: (resp as? HTTPURLResponse)?.statusCode ?? 0)
+        return try GeminiParsing.annotation(fromGenerateContent: checked)
     }
 
     public func embed(text: String) async throws -> [Float] {
         let key = try currentKey()
-        let (data, _) = try await session.data(for: Self.embedRequest(apiKey: key, text: text))
-        return try GeminiParsing.embedding(fromEmbedContent: data)
+        let (data, resp) = try await session.data(for: Self.embedRequest(apiKey: key, text: text))
+        let checked = try Self.mapResponse(data: data, statusCode: (resp as? HTTPURLResponse)?.statusCode ?? 0)
+        return try GeminiParsing.embedding(fromEmbedContent: checked)
     }
 }
