@@ -1,0 +1,11 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          { "text": "{\"ocr_text\":\"你好\",\"description\":\"一隻貓比讚\",\"tags\":[\"貓\",\"讚\"],\"emotion\":\"開心\"}" }
+        ]
+      }
+    }
+  ]
+}
