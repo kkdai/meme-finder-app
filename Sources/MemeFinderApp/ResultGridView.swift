@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import MemeFinder
 
 public struct ResultGridView: View {
@@ -28,15 +29,23 @@ public struct ResultGridView: View {
 
 struct AsyncThumbnail: View {
     let path: String
+    @State private var image: NSImage?
+
     var body: some View {
         Group {
-            if let img = NSImage(contentsOfFile: path) {
-                Image(nsImage: img).resizable().scaledToFit()
+            if let image {
+                Image(nsImage: image).resizable().scaledToFit()
             } else {
                 Color.gray.opacity(0.2)
             }
         }
         .frame(height: 140)
         .clipShape(RoundedRectangle(cornerRadius: 8))
+        .task(id: path) {
+            let mtime = ((try? FileManager.default.attributesOfItem(atPath: path)[.modificationDate]) as? Date) ?? Date()
+            if let data = await ThumbnailLoader.shared.thumbnailData(path: path, modifiedAt: mtime, maxPixelSize: 280) {
+                image = NSImage(data: data)
+            }
+        }
     }
 }
