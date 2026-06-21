@@ -47,6 +47,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                               modifiers: carbonModifiers(command: true, control: true, option: false, shift: false)) { [weak self] in
             self?.togglePopover()
         }
+        if hotKey?.isRegistered == false {
+            NSLog("MemeFinder: ⌃⌘M global hotkey unavailable (already in use); use the menu-bar icon.")
+        }
     }
 
     @objc private func statusButtonClicked() {

@@ -13,6 +13,9 @@ public final class GlobalHotKey {
     nonisolated(unsafe) private let handler: () -> Void
     private let id: UInt32
 
+    // Carbon delivers hotkey events on the main run loop, and init/deinit run on
+    // the main actor, so this registry is only ever touched from the main thread —
+    // the nonisolated(unsafe) statics are safe by that invariant.
     // Maps a hotkey id to its instance so the C event callback can dispatch.
     nonisolated(unsafe) private static var registry: [UInt32: GlobalHotKey] = [:]
     nonisolated(unsafe) private static var nextID: UInt32 = 1
