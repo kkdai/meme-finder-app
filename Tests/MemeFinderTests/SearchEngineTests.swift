@@ -11,6 +11,8 @@ private func img(_ id: String, _ emb: [Float], ocr: String = "", tags: [String] 
     let images = [img("a", [1, 0]), img("b", [0.7, 0.7]), img("c", [0, 1])]
     let r = SearchEngine().search(queryEmbedding: [1, 0], queryText: "", in: images, limit: 10)
     #expect(r.map(\.image.id) == ["a", "b"])  // "c" is orthogonal -> score 0, excluded
+    #expect(r.count == 2)                       // "c" (orthogonal -> score 0) excluded
+    #expect(r[0].score > r[1].score)
 }
 
 @Test func keywordMatchBoostsScore() {
@@ -18,6 +20,8 @@ private func img(_ id: String, _ emb: [Float], ocr: String = "", tags: [String] 
     let r = SearchEngine().search(queryEmbedding: [1, 0], queryText: "貓", in: images, limit: 10)
     #expect(r.first?.image.id == "a")
     #expect((r.first?.score ?? 0) > 0)
+    #expect(r.count == 1)
+    #expect(abs((r.first?.score ?? 0) - 0.1) < 1e-6)
 }
 
 @Test func respectsLimit() {
