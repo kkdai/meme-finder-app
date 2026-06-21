@@ -52,9 +52,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func statusButtonClicked() {
         guard let event = NSApp.currentEvent else { togglePopover(); return }
         if event.type == .rightMouseUp {
-            statusItem?.menu = makeMenu()
-            statusItem?.button?.performClick(nil)
-            statusItem?.menu = nil  // restore left-click toggle
+            // Pop the menu up directly rather than assigning statusItem.menu and
+            // clearing it synchronously (which races AppKit's menu-tracking loop).
+            if let button = statusItem?.button {
+                NSMenu.popUpContextMenu(makeMenu(), with: event, for: button)
+            }
         } else {
             togglePopover()
         }
@@ -105,10 +107,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.title = "MemeFinder 設定"
             window.styleMask = [.titled, .closable]
             window.isReleasedWhenClosed = false
+            window.center()  // center once on first creation; keep user's position after
             settingsWindow = window
         }
         NSApp.activate(ignoringOtherApps: true)
-        settingsWindow?.center()
         settingsWindow?.makeKeyAndOrderFront(nil)
     }
 
