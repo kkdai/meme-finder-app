@@ -16,6 +16,11 @@ let package = Package(
             name: "MemeFinder",
             path: "Sources/MemeFinder"
         ),
+        .executableTarget(
+            name: "MemeFinderApp",
+            dependencies: ["MemeFinder"],
+            path: "Sources/MemeFinderApp"
+        ),
         .testTarget(
             name: "MemeFinderTests",
             dependencies: [
