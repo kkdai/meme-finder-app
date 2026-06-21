@@ -17,6 +17,19 @@ private func fixture(_ name: String) throws -> Data {
     #expect(v == [0.01, 0.02, 0.03])
 }
 
+@Test func parsesAnnotationSkippingThoughtPart() throws {
+    // A thinking model can return a leading part with no text (a "thought"),
+    // followed by the real JSON part. The parser must skip to the text part.
+    let json = """
+    {"candidates":[{"content":{"parts":[
+      {"thoughtSignature":"abc"},
+      {"text":"{\\"ocr_text\\":\\"嗨\\",\\"description\\":\\"狗\\",\\"tags\\":[\\"狗\\"],\\"emotion\\":\\"開心\\"}"}
+    ]}}]}
+    """
+    let a = try GeminiParsing.annotation(fromGenerateContent: Data(json.utf8))
+    #expect(a == Annotation(ocrText: "嗨", description: "狗", tags: ["狗"], emotion: "開心"))
+}
+
 @Test func throwsOnMalformedResponse() {
     #expect(throws: GeminiError.self) {
         _ = try GeminiParsing.annotation(fromGenerateContent: Data("{}".utf8))
